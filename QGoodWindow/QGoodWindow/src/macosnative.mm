@@ -25,7 +25,7 @@ SOFTWARE.
 #include "macosnative.h"
 #include <Cocoa/Cocoa.h>
 
-void macOSNative::setStyle(long winid, Style *style)
+void macOSNative::setStyle(long winid, Style *style, bool forceActive)
 {
     NSView *nativeView = reinterpret_cast<NSView*>(winid);
     NSWindow *nativeWindow = [nativeView window];
@@ -56,8 +56,9 @@ void macOSNative::setStyle(long winid, Style *style)
         [nativeWindow standardWindowButton:NSWindowMiniaturizeButton].hidden = !style->m_is_native_caption_buttons_visible;
         [nativeWindow standardWindowButton:NSWindowZoomButton].hidden = !style->m_is_native_caption_buttons_visible;
         [nativeWindow standardWindowButton:NSWindowCloseButton].hidden = !style->m_is_native_caption_buttons_visible;
-        [nativeWindow makeKeyWindow];
-
+        if ([nativeWindow isKeyWindow] || forceActive) {
+            [nativeWindow makeKeyWindow];
+        }
         break;
     }
     case StyleType::Disabled:
@@ -71,8 +72,9 @@ void macOSNative::setStyle(long winid, Style *style)
         [nativeWindow standardWindowButton:NSWindowMiniaturizeButton].hidden = !style->m_is_native_caption_buttons_visible;
         [nativeWindow standardWindowButton:NSWindowZoomButton].hidden = !style->m_is_native_caption_buttons_visible;
         [nativeWindow standardWindowButton:NSWindowCloseButton].hidden = !style->m_is_native_caption_buttons_visible;
-        [nativeWindow makeKeyWindow];
-
+        if ([nativeWindow isKeyWindow] || forceActive) {
+            [nativeWindow makeKeyWindow];
+        }
         break;
     }
     case StyleType::Fullscreen:

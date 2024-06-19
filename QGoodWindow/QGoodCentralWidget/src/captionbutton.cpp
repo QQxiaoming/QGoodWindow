@@ -40,7 +40,6 @@ CaptionButton::CaptionButton(IconType type, QWidget *parent) : QWidget(parent)
 
 CaptionButton::~CaptionButton()
 {
-
 }
 
 QPixmap CaptionButton::loadSVG(const QString &svg_path, int w, int h)
@@ -89,10 +88,8 @@ void CaptionButton::paintIcons(const QPixmap &pix_in, bool dark,
 
 void CaptionButton::drawIcons()
 {
-    const int size = 10;
-
-    const int w = size;
-    const int h = size;
+    const int w = 8;
+    const int h = 6;
 
     switch (m_type)
     {

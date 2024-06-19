@@ -56,7 +56,7 @@ inline void handleNotification(const char *notification_name, long wid)
     notification.notification(notification_name, wid);
 }
 
-void setStyle(long winid, Style *style);
+void setStyle(long winid, Style *style, bool forceActive = true);
 
 const char *themeName();
 void frameGeometry(long wid, int *x, int *y, int *w, int *h);

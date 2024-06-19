@@ -32,6 +32,7 @@ SOFTWARE.
 #include "qgoodstateholder.h"
 #include "lightstyle.h"
 #include "darkstyle.h"
+#include "customcolorstyle.h"
 
 #include "qgoodwindow_global.h"
 
@@ -136,6 +137,8 @@ public:
 
     /** Returns the window flags of the *QGoodWindow*. */
     Qt::WindowFlags windowFlags() const;
+    
+    void setWindowStaysOnTop(bool on_top);
 
     /*** QGOODWINDOW FUNCTIONS BEGIN ***/
 
@@ -160,6 +163,8 @@ public:
     /** Set the app theme to the light theme. */
     static void setAppLightTheme();
 
+    static void setAppCustomTheme(bool isDark, const QColor &c);
+
     /** Get the global state holder. */
     static QGoodStateHolder *qGoodStateHolderInstance();
 
@@ -174,6 +179,8 @@ Q_SIGNALS:
     /** Notify that the visibility of caption buttons have changed on macOS. */
     void captionButtonsVisibilityChangedOnMacOS();
 
+    void fixIssueWindowEvent(QEvent::Type type);
+    
     /*** QGOODWINDOW FUNCTIONS BEGIN ***/
 
 public:
@@ -570,9 +577,16 @@ private:
     Qt::WindowFlags m_window_flags;
 #endif
 #ifdef Q_OS_MAC
+public:
+    // FIXME: This is a special case for QuardCRT, remove it when possible.
+    void fixWhenShowQuardCRTTabPreviewIssue();
+signals:
+    void macosWindowWillEnterFullScreen();
+    void macosWindowDidEnterFullScreen();
+private:
     //Functions
     void notificationReceiver(const QByteArray &notification);
-    void setMacOSStyle(int style_type);
+    void setMacOSStyle(int style_type, bool force_active = true);
 
     //Variables
     bool m_is_native_caption_buttons_visible_on_mac;

@@ -66,7 +66,6 @@ class ParentWindow : public QWidget
 public:
     explicit ParentWindow(QWidget *parent) : QWidget(parent, Qt::Window)
     {
-
     }
 
 private:
@@ -598,6 +597,9 @@ Qt::WindowFlags QGoodWindow::windowFlags() const
     if (GetWindowLongW(hwnd, GWL_STYLE) & WS_MAXIMIZEBOX)
         flags |= Qt::WindowMaximizeButtonHint;
 
+    if (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
+        flags |= Qt::WindowStaysOnTopHint;
+        
     flags |= Qt::WindowCloseButtonHint;
 
     return flags;
@@ -605,6 +607,27 @@ Qt::WindowFlags QGoodWindow::windowFlags() const
     return m_window_flags;
 #else
     return QMainWindow::windowFlags();
+#endif
+}
+
+void QGoodWindow::setWindowStaysOnTop(bool on_top)
+{
+#ifdef Q_OS_WIN
+    if (on_top)
+        SetWindowPos(m_hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+    else
+        SetWindowPos(m_hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+#else
+#if defined Q_OS_LINUX
+    if (on_top)
+        m_window_flags |= Qt::WindowStaysOnTopHint;
+    else
+        m_window_flags &= ~Qt::WindowStaysOnTopHint;
+#endif
+    if(on_top)
+        QMainWindow::setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+    else
+        QMainWindow::setWindowFlags(windowFlags() & ~Qt::WindowStaysOnTopHint);
 #endif
 }
 
@@ -738,6 +761,16 @@ void QGoodWindow::setAppDarkTheme()
 void QGoodWindow::setAppLightTheme()
 {
     qApp->setStyle(new LightStyle());
+    qApp->style()->setObjectName("fusion");
+}
+
+void QGoodWindow::setAppCustomTheme(bool isDark, const QColor &c)
+{
+    if(isDark) {
+        qApp->setStyle(new CustomColorDarkStyle(c));
+    } else {
+        qApp->setStyle(new CustomColorLightStyle(c));
+    }
     qApp->style()->setObjectName("fusion");
 }
 
@@ -1913,6 +1946,7 @@ bool QGoodWindow::event(QEvent *event)
         break;
     }
 #endif
+    emit fixIssueWindowEvent(event->type());
     return QMainWindow::event(event);
 }
 
@@ -2109,7 +2143,7 @@ bool QGoodWindow::eventFilter(QObject *watched, QEvent *event)
         if (m_on_animate_event)
             break;
 
-        setMacOSStyle(int(macOSNative::StyleType::NoState));
+        setMacOSStyle(int(macOSNative::StyleType::NoState),false);
 
         break;
     }
@@ -4224,11 +4258,18 @@ void QGoodWindow::sizeMoveBorders()
 }
 #endif
 #ifdef Q_OS_MAC
-void QGoodWindow::setMacOSStyle(int style_type)
+void QGoodWindow::setMacOSStyle(int style_type, bool forceActive)
 {
     macOSNative::Style *style = static_cast<macOSNative::Style*>(style_ptr);
     style->m_style = macOSNative::StyleType(style_type);
-    macOSNative::setStyle(long(winId()), style);
+    macOSNative::setStyle(long(winId()), style, forceActive);
+}
+
+// FIXME: This is a special case for QuardCRT, remove it when possible.
+void QGoodWindow::fixWhenShowQuardCRTTabPreviewIssue() {
+    // if not in fullscreen, setMacOSStyle
+    if(!isFullScreen())
+        setMacOSStyle(int(macOSNative::StyleType::NoState),false);
 }
 
 void QGoodWindow::notificationReceiver(const QByteArray &notification)
@@ -4238,6 +4279,8 @@ void QGoodWindow::notificationReceiver(const QByteArray &notification)
         m_on_animate_event = true;
 
         setMacOSStyle(int(macOSNative::StyleType::Fullscreen));
+
+        emit macosWindowWillEnterFullScreen();
     }
     else if (notification == "NSWindowWillExitFullScreenNotification")
     {
@@ -4248,6 +4291,8 @@ void QGoodWindow::notificationReceiver(const QByteArray &notification)
         setMacOSStyle(int(macOSNative::StyleType::NoState));
 
         m_on_animate_event = false;
+
+        emit macosWindowDidEnterFullScreen();
     }
     else if (notification == "AppleInterfaceThemeChangedNotification")
     {

@@ -72,8 +72,6 @@ QGoodCentralWidget::QGoodCentralWidget(QGoodWindow *gw) : QWidget(gw)
         }
     });
 
-    m_draw_borders = !QGoodWindow::shouldBordersBeDrawnBySystem();
-
 #ifdef Q_OS_MAC
     auto caption_buttons_visibility_changed_func = [=]{
         if (m_gw->isNativeCaptionButtonsVisibleOnMac())
@@ -81,17 +79,17 @@ QGoodCentralWidget::QGoodCentralWidget(QGoodWindow *gw) : QWidget(gw)
             setCaptionButtonsVisible(false);
             setIconVisible(false);
 
-            QRect rect = m_gw->titleBarButtonsRectOnMacOS();
-            m_title_bar->m_left_margin_widget_place_holder->setFixedSize(rect.x() * 2 + rect.width(), rect.y() + rect.height());
-            m_title_bar->m_left_widget_place_holder->setVisible(true);
+            //QRect rect = m_gw->titleBarButtonsRectOnMacOS();
+            //m_title_bar->m_left_margin_widget_place_holder->setFixedSize(rect.x() * 2 + rect.width(), rect.y() + rect.height());
+            //m_title_bar->m_left_widget_place_holder->setVisible(true);
         }
         else
         {
             setCaptionButtonsVisible(true);
             setIconVisible(true);
 
-            m_title_bar->m_left_margin_widget_place_holder->setFixedSize(0, 0);
-            m_title_bar->m_left_widget_place_holder->setVisible(false);
+            //m_title_bar->m_left_margin_widget_place_holder->setFixedSize(0, 0);
+            //m_title_bar->m_left_widget_place_holder->setVisible(false);
         }
     };
 
@@ -125,7 +123,6 @@ QGoodCentralWidget::QGoodCentralWidget(QGoodWindow *gw) : QWidget(gw)
 
 QGoodCentralWidget::~QGoodCentralWidget()
 {
-
 }
 
 int QGoodCentralWidget::execDialogWithWindow(QDialog *dialog, QGoodWindow *parent_gw,
@@ -241,6 +238,10 @@ QWidget *QGoodCentralWidget::setLeftTitleBarWidget(QWidget *widget, bool transpa
 #endif
 }
 
+void QGoodCentralWidget::setLeftTitleBarWidth(int width) {
+    if (m_title_bar) m_title_bar->setLeftTitleBarWidth(width);
+}
+
 QWidget *QGoodCentralWidget::setRightTitleBarWidget(QWidget *widget, bool transparent_for_mouse)
 {
 #ifdef QGOODWINDOW
@@ -342,9 +343,8 @@ void QGoodCentralWidget::setTitleBarVisible(bool visible)
     m_title_bar_visible = visible;
     m_title_bar->setVisible(m_title_bar_visible);
     m_title_bar->setEnabled(m_title_bar_visible);
-#ifdef Q_OS_MAC
-    m_gw->setNativeCaptionButtonsVisibleOnMac(visible);
-#endif
+    if (!m_title_bar_visible)
+        m_gw->setNativeCaptionButtonsVisibleOnMac(false);
     updateWindow();
 #else
     Q_UNUSED(visible)
@@ -576,8 +576,6 @@ void QGoodCentralWidget::updateWindowLater()
         return;
 
     bool window_active = m_gw->isActiveWindow();
-    bool window_no_state = m_gw->windowState().testFlag(Qt::WindowNoState);
-    bool draw_borders = m_draw_borders;
     bool is_maximized = m_gw->isMaximized();
     bool is_full_screen = m_gw->isFullScreen();
     int title_bar_width = m_title_bar->width();
@@ -587,22 +585,6 @@ void QGoodCentralWidget::updateWindowLater()
 
     if (m_icon_visible)
         icon_width = m_title_bar->m_icon_widget->width();
-
-    QString border_str = "none;";
-
-    if (draw_borders && window_no_state)
-    {
-        if (window_active)
-            border_str = QString("border: 1px solid %0;").arg(m_active_border_color.name());
-        else
-            border_str = "border: 1px solid #AAAAAA;";
-    }
-
-#ifdef Q_OS_LINUX
-    border_str.append("border-radius: 8px;");
-#endif
-
-    m_frame->setStyleSheet(m_frame_style.arg(border_str));
 
     m_title_bar->setMaximized(is_maximized && !is_full_screen);
 
@@ -727,9 +709,12 @@ void QGoodCentralWidget::updateWindowLater()
             QRect max_rect = m_title_bar->maximizeButtonRect();
             QRect cls_rect = m_title_bar->closeButtonRect();
 
-            min_rect.moveLeft(title_bar_width - cls_rect.width() - max_rect.width() - min_rect.width());
-            max_rect.moveLeft(title_bar_width - cls_rect.width() - max_rect.width());
-            cls_rect.moveLeft(title_bar_width - cls_rect.width());
+            if(qApp->isLeftToRight()) 
+            {
+                min_rect.moveLeft(title_bar_width - cls_rect.width() - max_rect.width() - min_rect.width());
+                max_rect.moveLeft(title_bar_width - cls_rect.width() - max_rect.width());
+                cls_rect.moveLeft(title_bar_width - cls_rect.width());
+            }
 
             m_gw->setMinimizeMask(min_rect);
             m_gw->setMaximizeMask(max_rect);
@@ -738,6 +723,7 @@ void QGoodCentralWidget::updateWindowLater()
     }
 
     m_title_bar->setActive(window_active);
+    emit windowActiveChanged(window_active);
 
     m_title_bar->updateWindow();
 #endif
